@@ -54,7 +54,7 @@ class Main(object):
         self.hud = Hud()
         self.level = 0
 
-        self.level_formula = lambda x: (x + random.randint(2, x + 2)) / 2
+        self.level_formula = lambda x: (x + random.randint(5, x + 5))
 
         self.player = Player()
         self.start()
@@ -181,7 +181,7 @@ class Main(object):
 class CommonSpider(pygame.sprite.Sprite):
 
     hit_sound = pygame.mixer.Sound(load_sound('hit_spider.ogg'))
-    hit_sound.set_volume(0.5)
+    hit_sound.set_volume(0.7)
 
     def __init__(self, img_1, img_2, health=1):
         super(CommonSpider, self).__init__()
@@ -293,7 +293,7 @@ class WailingWidow(CommonSpider):
 class Weapon(pygame.sprite.Sprite):
 
     shot_sound = pygame.mixer.Sound(load_sound('shot_bone.wav'))
-    shot_sound.set_volume(0.5)
+    shot_sound.set_volume(0.7)
 
     def __init__(self, centerx, top):
         super(Weapon, self).__init__()
