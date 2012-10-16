@@ -49,6 +49,9 @@ SPACE - Attack
 - add additional weapons
 
 ### History:
+###### 0.1.6
+* fixed game over
+
 ###### 0.1.5
 * adding background sprite
 * new character sprite

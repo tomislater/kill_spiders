@@ -9,6 +9,8 @@ from pygame.locals import K_RIGHT
 from pygame.locals import K_SPACE
 from pygame.locals import K_ESCAPE
 from pygame.locals import KEYUP
+from pygame.locals import K_y
+from pygame.locals import K_n
 
 main_dir = os.path.split(os.path.abspath(__file__))[0]
 
@@ -49,15 +51,17 @@ class Main(object):
         self.background = load_image('background.png')
         pygame.mixer.music.load(load_sound('background.ogg'))
 
+        self.brushing()
+
+        self.level_formula = lambda x: (x + random.randint(5, x + 5))
+        self.start()
+
+    def brushing(self):
         self.weapons = []
         self.spiders = []
         self.hud = Hud()
-        self.level = 0
-
-        self.level_formula = lambda x: (x + random.randint(5, x + 5))
-
         self.player = Player()
-        self.start()
+        self.level = 0
 
     def event(self):
         for event in pygame.event.get():
@@ -74,7 +78,7 @@ class Main(object):
 
     def check_collision_spiders(self):
         for i in reversed(xrange(len(self.spiders))):
-            # collision with deadline
+            # collision with deadline and player
             if self.spiders[i].rect.top < self.deadline or \
                 (self.spiders[i].rect.colliderect(self.player) and self.player.alive()):
                     self.player.hit()
@@ -136,7 +140,12 @@ class Main(object):
             self.level += 1
             text_level = self.font.render("LEVEL {0}".format(self.level), 1, SILVER)
             text_level_p = text_level.get_rect(centerx=SCREEN_WIDTH / 2, centery=SCREEN_HEIGHT / 2)
+
+            self.surface.blit(self.background, (0, 0))
             self.surface.blit(text_level, text_level_p)
+            self.player.draw(self.surface)
+            self.hud.draw(self.surface, self.player.health, self.level)
+
             self.make_spiders()
             self.weapons = []
             pygame.display.update()
@@ -145,13 +154,48 @@ class Main(object):
 
     def check_health(self):
         if not self.player.alive():
-            game_over_text = self.font.render("GAME OVER", 1, SILVER)
-            game_over_text_p = game_over_text.get_rect(centerx=SCREEN_WIDTH / 2, centery=SCREEN_HEIGHT / 2)
-            self.surface.blit(game_over_text, game_over_text_p)
+            self.animation_game_over()
+
+    def animation_game_over(self):
+        game_over_text = self.font.render("GAME OVER", 1, SILVER)
+        game_over_text_r = game_over_text.get_rect(centerx=SCREEN_WIDTH / 2, centery=SCREEN_HEIGHT / 2)
+
+        self.surface.blit(self.background, (0, 0))
+        self.surface.blit(game_over_text, game_over_text_r)
+        self.player.draw(self.surface)
+        self.hud.draw(self.surface, self.player.health, self.level)
+
+        pygame.display.update()
+        self.clock.tick(FPS)
+        pygame.time.delay(1000)
+
+        self.prompt_to_game()
+
+    def prompt_to_game(self):
+        prompt_text = self.font.render("Play again? [y / n]", 1, SILVER)
+        prompt_text_r = prompt_text.get_rect(centerx=SCREEN_WIDTH / 2, centery=SCREEN_HEIGHT / 2)
+        prompt_loop = True
+
+        while prompt_loop:
+            for event in pygame.event.get():
+                if event.type == QUIT:
+                    self.MAIN_LOOP = False
+                    prompt_loop = False
+                elif event.type == KEYUP:
+                    if event.key in (K_ESCAPE, K_n):
+                        self.MAIN_LOOP = False
+                        prompt_loop = False
+                    elif event.key == K_y:
+                        self.brushing()
+                        prompt_loop = False
+
+            self.surface.blit(self.background, (0, 0))
+            self.player.draw(self.surface)
+            self.hud.draw(self.surface, self.player.health, self.level)
+            self.surface.blit(prompt_text, prompt_text_r)
+
             pygame.display.update()
             self.clock.tick(FPS)
-            self.MAIN_LOOP = False
-            pygame.time.delay(2000)
 
     def start(self):
         pygame.mixer.music.play(-1, 0.0)
@@ -160,7 +204,6 @@ class Main(object):
 
             self.surface.blit(self.background, (0, 0))
 
-            self.check_health()
             self.check_spiders()
             self.draw_spiders()
 
@@ -171,9 +214,12 @@ class Main(object):
             self.check_collision_spiders()
             self.check_collision_bone()
 
+            self.check_health()
+
             pygame.display.update()
             self.clock.tick(FPS)
 
+        # game over
         pygame.mixer.music.stop()
         pygame.quit()
 
@@ -358,7 +404,8 @@ class Player(pygame.sprite.Sprite):
         surface.blit(self.image, self.rect)
 
     def hit(self):
-        del self.health[-1]
+        if self.health:
+            del self.health[-1]
 
     def alive(self):
         if not self.health:
