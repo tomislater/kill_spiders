@@ -59,6 +59,7 @@ class Main(object):
     def brushing(self):
         self.weapons = []
         self.spiders = []
+        self.dead_spiders = []
         self.hud = Hud()
         self.player = Player()
         self.level = 0
@@ -82,8 +83,15 @@ class Main(object):
             if self.spiders[i].rect.top < self.deadline or \
                 (self.spiders[i].rect.colliderect(self.player) and self.player.alive()):
                     self.player.hit()
-                    del self.spiders[i]
+                    self.spiders[i].get_rect_for_dead_spider()
+                    self.dead_spiders.append(self.spiders.pop(i))
                     continue
+
+        for i in reversed(xrange(len(self.dead_spiders))):
+            # collision with bottom screen
+            if self.dead_spiders[i].rect_dead.top > SCREEN_HEIGHT:
+                del self.dead_spiders[i]
+                continue
 
     def check_collision_bone(self):
         for i in reversed(xrange(len(self.weapons))):
@@ -93,7 +101,7 @@ class Main(object):
                 self.spiders[index_spider].hit()
                 if not self.spiders[index_spider].alive():
                     self.hud.update_score(self.spiders[index_spider].score)
-                    del self.spiders[index_spider]
+                    self.dead_spiders.append(self.spiders.pop(index_spider))
                 del self.weapons[i]
                 continue
 
@@ -109,6 +117,11 @@ class Main(object):
         for spider in self.spiders:
             spider.update(self.level)
             spider.draw(self.surface)
+
+    def draw_dead_spiders(self):
+        for dead_spider in self.dead_spiders:
+            dead_spider.update_dead()
+            dead_spider.draw_dead(self.surface)
 
     def make_spiders(self):
         lvl_formula = self.level_formula(self.level)
@@ -128,10 +141,6 @@ class Main(object):
                 self.spiders.append(GiantSpider())
 
         if self.level % 15 == 0:
-            for x in xrange(0, self.level / 15):
-                self.spiders.append(Spidris())
-
-        if self.level % 30 == 0:
             for x in xrange(0, self.level / 30):
                 self.spiders.append(WailingWidow())
 
@@ -148,6 +157,7 @@ class Main(object):
 
             self.make_spiders()
             self.weapons = []
+            self.dead_spiders = []
             pygame.display.update()
             self.clock.tick(FPS)
             pygame.time.delay(1500)
@@ -204,6 +214,8 @@ class Main(object):
 
             self.surface.blit(self.background, (0, 0))
 
+            self.draw_dead_spiders()
+
             self.check_spiders()
             self.draw_spiders()
 
@@ -229,7 +241,7 @@ class CommonSpider(pygame.sprite.Sprite):
     hit_sound = pygame.mixer.Sound(load_sound('hit_spider.ogg'))
     hit_sound.set_volume(0.7)
 
-    def __init__(self, img_1, img_2, health=1):
+    def __init__(self, img_1, img_2, img_dead, health=1):
         super(CommonSpider, self).__init__()
 
         self.images = list()
@@ -245,10 +257,18 @@ class CommonSpider(pygame.sprite.Sprite):
         self.rect.bottom = SCREEN_HEIGHT + random.randint(0, SCREEN_HEIGHT / 4)
         self.rect.left = random.randint(0, SCREEN_WIDTH - self.rect.width)
 
+        self.image_dead = load_image(img_dead)
+        self.rect_dead = self.image_dead.get_rect()
+        self.simply_gravity = 0
+
     def update(self, level):
         self.frame_count += 1
         self.image = self.images[self.frame_count % 30]
         self.rect.move_ip(0, random.randint(- int(math.log(level, 6)) - 1, 0))
+
+    def update_dead(self):
+        self.simply_gravity += 1
+        self.rect_dead.move_ip(0, 2 * self.simply_gravity)
 
     def hit(self, hit=1):
         self.hit_sound.play()
@@ -257,26 +277,35 @@ class CommonSpider(pygame.sprite.Sprite):
     def alive(self):
         if self.health:
             return True
+        self.get_rect_for_dead_spider()
         return False
+
+    def get_rect_for_dead_spider(self):
+        (self.rect_dead.centerx, self.rect_dead.centery) = (self.rect.centerx, self.rect.centery)
 
     def draw(self, surface):
         surface.blit(self.image, self.rect)
+
+    def draw_dead(self, surface):
+        surface.blit(self.image_dead, self.rect_dead)
 
 
 class Spider(CommonSpider):
     IMG_1 = 'spider_f1.png'
     IMG_2 = 'spider_f2.png'
+    IMG_DEAD = 'spider_dead.png'
 
     def __init__(self):
-        super(Spider, self).__init__(self.IMG_1, self.IMG_2)
+        super(Spider, self).__init__(self.IMG_1, self.IMG_2, self.IMG_DEAD)
 
 
 class PoisonSpider(CommonSpider):
     IMG_1 = 'poison_spider_f1.png'
     IMG_2 = 'poison_spider_f2.png'
+    IMG_DEAD = 'poison_spider_dead.png'
 
     def __init__(self):
-        super(PoisonSpider, self).__init__(self.IMG_1, self.IMG_2, health=2)
+        super(PoisonSpider, self).__init__(self.IMG_1, self.IMG_2, self.IMG_DEAD, health=2)
 
     def update(self, level):
         self.frame_count += 1
@@ -287,9 +316,10 @@ class PoisonSpider(CommonSpider):
 class Tarantula(CommonSpider):
     IMG_1 = 'tarantula_f1.png'
     IMG_2 = 'tarantula_f2.png'
+    IMG_DEAD = 'tarantula_dead.png'
 
     def __init__(self):
-        super(Tarantula, self).__init__(self.IMG_1, self.IMG_2, health=5)
+        super(Tarantula, self).__init__(self.IMG_1, self.IMG_2, self.IMG_DEAD, health=5)
 
     def update(self, level):
         self.frame_count += 1
@@ -300,9 +330,10 @@ class Tarantula(CommonSpider):
 class GiantSpider(CommonSpider):
     IMG_1 = 'giant_spider_f1.png'
     IMG_2 = 'giant_spider_f2.png'
+    IMG_DEAD = 'giant_spider_dead.png'
 
     def __init__(self):
-        super(GiantSpider, self).__init__(self.IMG_1, self.IMG_2, health=10)
+        super(GiantSpider, self).__init__(self.IMG_1, self.IMG_2, self.IMG_DEAD, health=15)
 
     def update(self, level):
         self.frame_count += 1
@@ -310,25 +341,13 @@ class GiantSpider(CommonSpider):
         self.rect.move_ip(0, random.randint(- int(math.log(level, 3)) - 1, 0))
 
 
-class Spidris(CommonSpider):
-    IMG_1 = 'spidris_f1.png'
-    IMG_2 = 'spidris_f2.png'
-
-    def __init__(self):
-        super(Spidris, self).__init__(self.IMG_1, self.IMG_2, health=15)
-
-    def update(self, level):
-        self.frame_count += 1
-        self.image = self.images[self.frame_count % 30]
-        self.rect.move_ip(0, random.randint(- int(math.log(level, 4)) - 2, 0))
-
-
 class WailingWidow(CommonSpider):
     IMG_1 = 'wailing_widow_f1.png'
     IMG_2 = 'wailing_widow_f2.png'
+    IMG_DEAD = 'wailing_widow_dead.png'
 
     def __init__(self):
-        super(WailingWidow, self).__init__(self.IMG_1, self.IMG_2, health=35)
+        super(WailingWidow, self).__init__(self.IMG_1, self.IMG_2, self.IMG_DEAD, health=35)
 
     def update(self, level):
         self.frame_count += 1

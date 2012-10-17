@@ -28,11 +28,6 @@ SPACE - Attack
 
 ##### Giant Spider
 ![Giant Spider](http://images4.wikia.nocookie.net/__cb20050424080941/tibia/en/images/9/99/Giant_Spider.gif)
-**SCORE:** 10
-**HP:** 10
-
-##### Spidris
-![Spidris](http://images3.wikia.nocookie.net/__cb20111201032551/tibia/en/images/9/9a/Spidris.gif)
 **SCORE:** 15
 **HP:** 15
 
@@ -45,12 +40,12 @@ SPACE - Attack
 [Kubbi - gravity](https://soundcloud.com/kubbi/gravity)
 
 ### TODO for next version:
-- add sprites for dead spiders
 - add additional weapons
 
 ### History:
 ###### 0.1.6
 * fixed game over
+* add sprites for dead spider
 
 ###### 0.1.5
 * adding background sprite
