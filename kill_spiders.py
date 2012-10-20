@@ -7,10 +7,13 @@ from pygame.locals import QUIT
 from pygame.locals import K_LEFT
 from pygame.locals import K_RIGHT
 from pygame.locals import K_SPACE
+from pygame.locals import K_LCTRL
 from pygame.locals import K_ESCAPE
 from pygame.locals import KEYUP
 from pygame.locals import K_y
 from pygame.locals import K_n
+
+__version__ = '0.1.7'
 
 main_dir = os.path.split(os.path.abspath(__file__))[0]
 
@@ -47,7 +50,7 @@ class Main(object):
         self.surface = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.deadline = 120  # for monster :))
 
-        self.font = pygame.font.Font(None, 20)
+        self.font = pygame.font.Font(None, 30)
         self.background = load_image('background.png')
         pygame.mixer.music.load(load_sound('background.ogg'))
 
@@ -59,6 +62,7 @@ class Main(object):
     def brushing(self):
         self.weapons = []
         self.spiders = []
+        self.effects = []
         self.dead_spiders = []
         self.hud = Hud()
         self.player = Player()
@@ -66,13 +70,15 @@ class Main(object):
 
     def event(self):
         for event in pygame.event.get():
-            if event.type == QUIT:
+            if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
                 self.MAIN_LOOP = False
             elif event.type == KEYUP:
-                if event.key == K_SPACE:
-                    self.weapons.append(Weapon(self.player.rect.centerx, self.player.rect.centery))
-                elif event.key == K_ESCAPE:
-                    self.MAIN_LOOP = False
+                if event.key == K_LCTRL:
+                    self.weapons.append(WhiteSkull(self.player.rect.centerx, self.player.rect.centery, self.player.direction))
+                elif event.key == K_SPACE:
+                    if self.player.black_skulls:
+                        self.weapons.append(BlackSkull(self.player.rect.centerx, self.player.rect.centery, self.player.direction))
+                        self.player.black_skulls -= 1
 
         keys = pygame.key.get_pressed()
         self.player.update(keys)
@@ -93,12 +99,14 @@ class Main(object):
                 del self.dead_spiders[i]
                 continue
 
-    def check_collision_bone(self):
+    def check_collision_weapons(self):
         for i in reversed(xrange(len(self.weapons))):
             # collision with spiders
             index_spider = self.weapons[i].rect.collidelist(self.spiders)
             if index_spider != -1:
-                self.spiders[index_spider].hit()
+                (x, y) = self.spiders[index_spider].rect.centerx, self.spiders[index_spider].rect.centery
+                self.effects.append(Effects(x, y))
+                self.spiders[index_spider].hit(self.weapons[i].hit)
                 if not self.spiders[index_spider].alive():
                     self.hud.update_score(self.spiders[index_spider].score)
                     self.dead_spiders.append(self.spiders.pop(index_spider))
@@ -112,6 +120,14 @@ class Main(object):
 
             self.weapons[i].update()
             self.weapons[i].draw(self.surface)
+
+    def draw_effects(self):
+        for i in reversed(xrange(len(self.effects))):
+            if self.effects[i].alive():
+                self.effects[i].update()
+                self.effects[i].draw(self.surface)
+            else:
+                del self.effects[i]
 
     def draw_spiders(self):
         for spider in self.spiders:
@@ -132,7 +148,7 @@ class Main(object):
         for x in xrange(0, lvl_formula / 3):
             self.spiders.append(PoisonSpider())
 
-        if self.level % 5 == 0:
+        if self.level > 5:
             for x in xrange(0, self.level / 5):
                 self.spiders.append(Tarantula())
 
@@ -146,17 +162,21 @@ class Main(object):
 
     def check_spiders(self):
         if not self.spiders:
+            self.player.black_skulls += 1
             self.level += 1
-            text_level = self.font.render("LEVEL {0}".format(self.level), 1, SILVER)
-            text_level_p = text_level.get_rect(centerx=SCREEN_WIDTH / 2, centery=SCREEN_HEIGHT / 2)
+
+            text_level = self.font.render("LEVEL {0}".format(self.level), True, SILVER)
+            text_level_r = text_level.get_rect(centerx=SCREEN_WIDTH / 2, centery=SCREEN_HEIGHT / 2)
 
             self.surface.blit(self.background, (0, 0))
-            self.surface.blit(text_level, text_level_p)
+            self.surface.blit(text_level, text_level_r)
+
             self.player.draw(self.surface)
-            self.hud.draw(self.surface, self.player.health, self.level)
+            self.hud.draw(self.surface, self.player.health, self.level, self.player.black_skulls)
 
             self.make_spiders()
             self.weapons = []
+            self.effects = []
             self.dead_spiders = []
             pygame.display.update()
             self.clock.tick(FPS)
@@ -173,7 +193,7 @@ class Main(object):
         self.surface.blit(self.background, (0, 0))
         self.surface.blit(game_over_text, game_over_text_r)
         self.player.draw(self.surface)
-        self.hud.draw(self.surface, self.player.health, self.level)
+        self.hud.draw(self.surface, self.player.health, self.level, self.player.black_skulls)
 
         pygame.display.update()
         self.clock.tick(FPS)
@@ -201,7 +221,7 @@ class Main(object):
 
             self.surface.blit(self.background, (0, 0))
             self.player.draw(self.surface)
-            self.hud.draw(self.surface, self.player.health, self.level)
+            self.hud.draw(self.surface, self.player.health, self.level, self.player.black_skulls)
             self.surface.blit(prompt_text, prompt_text_r)
 
             pygame.display.update()
@@ -209,6 +229,23 @@ class Main(object):
 
     def start(self):
         pygame.mixer.music.play(-1, 0.0)
+
+        text_controls_ctrl = self.font.render("CTRL - White Skulls (Power: 1)", True, SILVER)
+        text_controls_space = self.font.render("SPACE - Black Skulls (Power: 5)", True, SILVER)
+        text_info = self.font.render("ONE BLACK SKULL FOR NEXT LEVEL", True, SILVER)
+        text_controls_ctrl_r = text_controls_ctrl.get_rect(centerx=SCREEN_WIDTH / 2,
+                                                           centery=(SCREEN_HEIGHT / 2) + 30)
+        text_controls_space_r = text_controls_space.get_rect(centerx=text_controls_ctrl_r.centerx,
+                                                             centery=text_controls_ctrl_r.centery + 30)
+        text_info_r = text_info.get_rect(centerx=text_controls_space_r.centerx,
+                                         centery=text_controls_space_r.centery + 60)
+        self.surface.blit(text_controls_ctrl, text_controls_ctrl_r)
+        self.surface.blit(text_controls_space, text_controls_space_r)
+        self.surface.blit(text_info, text_info_r)
+        pygame.display.update()
+        self.clock.tick(FPS)
+        pygame.time.delay(3000)
+
         while self.MAIN_LOOP:
             pygame.display.set_caption("Kill spiders with bones! FPS: {0:.0f}".format(self.clock.get_fps()))
 
@@ -220,18 +257,19 @@ class Main(object):
             self.draw_spiders()
 
             self.player.draw(self.surface)
-            self.hud.draw(self.surface, self.player.health, self.level)
+            self.hud.draw(self.surface, self.player.health, self.level, self.player.black_skulls)
             self.event()
 
             self.check_collision_spiders()
-            self.check_collision_bone()
+            self.check_collision_weapons()
 
             self.check_health()
+
+            self.draw_effects()
 
             pygame.display.update()
             self.clock.tick(FPS)
 
-        # game over
         pygame.mixer.music.stop()
         pygame.quit()
 
@@ -239,7 +277,7 @@ class Main(object):
 class CommonSpider(pygame.sprite.Sprite):
 
     hit_sound = pygame.mixer.Sound(load_sound('hit_spider.ogg'))
-    hit_sound.set_volume(0.7)
+    hit_sound.set_volume(0.6)
 
     def __init__(self, img_1, img_2, img_dead, health=1):
         super(CommonSpider, self).__init__()
@@ -250,8 +288,8 @@ class CommonSpider(pygame.sprite.Sprite):
         self.health = health
         self.score = health
 
-        self.images.extend([load_image(img_1)] * 15)
-        self.images.extend([load_image(img_2)] * 15)
+        self.images.extend([load_image(img_1)] * (FPS / 2))
+        self.images.extend([load_image(img_2)] * (FPS / 2))
         self.image = self.images[0]
         self.rect = self.image.get_rect()
         self.rect.bottom = SCREEN_HEIGHT + random.randint(0, SCREEN_HEIGHT / 4)
@@ -262,8 +300,8 @@ class CommonSpider(pygame.sprite.Sprite):
         self.simply_gravity = 0
 
     def update(self, level):
+        self.image = self.images[self.frame_count % FPS]
         self.frame_count += 1
-        self.image = self.images[self.frame_count % 30]
         self.rect.move_ip(0, random.randint(- int(math.log(level, 6)) - 1, 0))
 
     def update_dead(self):
@@ -275,7 +313,7 @@ class CommonSpider(pygame.sprite.Sprite):
         self.health -= hit
 
     def alive(self):
-        if self.health:
+        if self.health > 0:
             return True
         self.get_rect_for_dead_spider()
         return False
@@ -308,8 +346,8 @@ class PoisonSpider(CommonSpider):
         super(PoisonSpider, self).__init__(self.IMG_1, self.IMG_2, self.IMG_DEAD, health=2)
 
     def update(self, level):
+        self.image = self.images[self.frame_count % FPS]
         self.frame_count += 1
-        self.image = self.images[self.frame_count % 30]
         self.rect.move_ip(0, random.randint(- int(math.log(level, 5)) - 1, 0))
 
 
@@ -322,8 +360,8 @@ class Tarantula(CommonSpider):
         super(Tarantula, self).__init__(self.IMG_1, self.IMG_2, self.IMG_DEAD, health=5)
 
     def update(self, level):
+        self.image = self.images[self.frame_count % FPS]
         self.frame_count += 1
-        self.image = self.images[self.frame_count % 30]
         self.rect.move_ip(0, random.randint(- int(math.log(level, 4)) - 1, 0))
 
 
@@ -336,8 +374,8 @@ class GiantSpider(CommonSpider):
         super(GiantSpider, self).__init__(self.IMG_1, self.IMG_2, self.IMG_DEAD, health=15)
 
     def update(self, level):
+        self.image = self.images[self.frame_count % FPS]
         self.frame_count += 1
-        self.image = self.images[self.frame_count % 30]
         self.rect.move_ip(0, random.randint(- int(math.log(level, 3)) - 1, 0))
 
 
@@ -350,32 +388,76 @@ class WailingWidow(CommonSpider):
         super(WailingWidow, self).__init__(self.IMG_1, self.IMG_2, self.IMG_DEAD, health=35)
 
     def update(self, level):
+        self.image = self.images[self.frame_count % FPS]
         self.frame_count += 1
-        self.image = self.images[self.frame_count % 30]
         self.rect.move_ip(0, random.randint(- int(math.log(level, 5)) - 1, 0))
+
+
+class Effects(pygame.sprite.Sprite):
+    BLOOD_F1 = 'blood_f1.png'
+    BLOOD_F2 = 'blood_f2.png'
+
+    def __init__(self, x, y):
+        super(Effects, self).__init__()
+
+        self.images = ([load_image(self.BLOOD_F1)] * (FPS / 15)) + ([load_image(self.BLOOD_F2)] * (FPS / 15))
+        self.rect = self.images[0].get_rect(centerx=x, centery=y)
+        self.frame_count = 0
+        self.simply_gravity = 0
+
+    def update(self):
+        self.simply_gravity += 1
+        self.image = self.images[self.frame_count % len(self.images)]
+        self.frame_count += 1
+        self.rect.move_ip(0, self.simply_gravity)
+
+    def alive(self):  # ;))
+        if self.frame_count > len(self.images):
+            return False
+        return True
+
+    def draw(self, surface):
+        surface.blit(self.image, self.rect)
 
 
 class Weapon(pygame.sprite.Sprite):
 
-    shot_sound = pygame.mixer.Sound(load_sound('shot_bone.wav'))
-    shot_sound.set_volume(0.7)
+    shot_sound = pygame.mixer.Sound(load_sound('shot.wav'))
+    shot_sound.set_volume(0.6)
 
-    def __init__(self, centerx, top):
+    def __init__(self, centerx, top, image, direction):
         super(Weapon, self).__init__()
 
         self.shot_sound.play()
-        self.image = load_image('bone.png')
+        self.image = load_image(image)
         self.rect = self.image.get_rect()
         self.rect.top = top
         self.rect.centerx = centerx
         self.simply_gravity = 1
+        self.direction = direction
 
     def update(self):
         self.simply_gravity += 1
-        self.rect.move_ip(0, 2 * self.simply_gravity)
+        self.rect.move_ip(self.direction, 2 * self.simply_gravity)
 
     def draw(self, surface):
         surface.blit(self.image, self.rect)
+
+
+class WhiteSkull(Weapon):
+    IMG = 'skull.png'
+    hit = 1
+
+    def __init__(self, centerx, top, direction):
+        super(WhiteSkull, self).__init__(centerx, top, self.IMG, direction)
+
+
+class BlackSkull(Weapon):
+    IMG = 'black_skull.png'
+    hit = 5
+
+    def __init__(self, centerx, top, direction):
+        super(BlackSkull, self).__init__(centerx, top, self.IMG, direction)
 
 
 class Player(pygame.sprite.Sprite):
@@ -393,9 +475,9 @@ class Player(pygame.sprite.Sprite):
                                   'character_right_f2.png',
                                   'character_right_f3.png',)):
             if i < 3:
-                self.images_left.extend([load_image(name)] * 5)
+                self.images_left.extend([load_image(name)] * (FPS / 6))
             else:
-                self.images_right.extend([load_image(name)] * 5)
+                self.images_right.extend([load_image(name)] * (FPS / 6))
 
         self.image = self.images_left[0]
 
@@ -405,16 +487,23 @@ class Player(pygame.sprite.Sprite):
         self.max = SCREEN_WIDTH
         self.frame_count = 1
 
+        self.black_skulls = 0
+
+        # for left
+        self.direction = -10
+
     def update(self, keys):
         if keys[K_LEFT]:
+            self.direction = -10
             self.frame_count += 1
-            self.image = self.images_left[self.frame_count % 15]
+            self.image = self.images_left[self.frame_count % (FPS / 2)]
             self.rect.move_ip(-10, 0)
             if self.rect.centerx < 0:
                 self.rect.centerx = 0
         elif keys[K_RIGHT]:
+            self.direction = 10
             self.frame_count += 1
-            self.image = self.images_right[self.frame_count % 15]
+            self.image = self.images_right[self.frame_count % (FPS / 2)]
             self.rect.move_ip(10, 0)
             if self.rect.centerx > self.max:
                 self.rect.centerx = self.max
@@ -436,13 +525,14 @@ class Hud(object):
     def __init__(self, font_size=20, score=0):
         self.font = pygame.font.Font(None, font_size)
         self.score = score
+        self.img_black_skull = load_image('black_skull.png')
 
     def update_score(self, score):
         self.score += score
         if self.score < 0:
             self.score = 0
 
-    def draw(self, surface, health, level):
+    def draw(self, surface, health, level, black_skulls):
         level = self.font.render("LEVEL: {0}".format(level), 1, SILVER)
         level_r = level.get_rect(centerx=SCREEN_WIDTH / 2, top=10)
         surface.blit(level, level_r)
@@ -458,6 +548,13 @@ class Hud(object):
         for i, img in enumerate(health):
             img_r = img.get_rect(centery=life_r.centery, left=50 + (i * 12))
             surface.blit(img, img_r)
+
+        x = self.font.render('x {0}'.format(black_skulls), 1, SILVER)
+        x_r = x.get_rect(centerx=SCREEN_WIDTH / 1.5, top=10)
+        surface.blit(x, x_r)
+
+        img_black_skull_r = self.img_black_skull.get_rect(centerx=x_r.centerx - 20, top=10)
+        surface.blit(self.img_black_skull, img_black_skull_r)
 
 
 if __name__ == '__main__':

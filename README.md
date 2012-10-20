@@ -2,13 +2,16 @@ Kill Spiders
 ============
 
 The player controls the skeleton. Player have to kill spiders through thrown weapons.
+The player receives one black skull for each level.
 
 ### Controls:
-LEFT ARROW - Move Player Left
+LEFT ARROW - Move player left
 
-RIGHT ARROW - Move Player Right
+RIGHT ARROW - Move player right
 
-SPACE - Attack
+LEFT CTRL - Throwing white skulls (Power 1)
+
+SPACE - Throwing black skulls (Power 5)
 
 ### Spiders:
 ##### Spider
@@ -39,10 +42,17 @@ SPACE - Attack
 #### BGM:
 [Kubbi - gravity](https://soundcloud.com/kubbi/gravity)
 
-### TODO for next version:
-- add additional weapons
+### TODO
+* jump up/down
+* menu
+* highscore
+* moar weapons
 
 ### History:
+###### 0.1.7
+* sprite for hit spider
+* add additional weapons
+
 ###### 0.1.6
 * fixed game over
 * add sprites for dead spider
