@@ -4,6 +4,9 @@ Kill Spiders
 The player controls the skeleton. Player have to kill spiders through thrown weapons.
 The player receives one black skull for each level.
 
+Start game:
+`python start_game.py`
+
 ### Controls:
 LEFT ARROW - Move player left
 
@@ -49,6 +52,9 @@ SPACE - Throwing black skulls (Power 5)
 * moar weapons
 
 ### History:
+###### 0.1.8
+* Refactoring
+
 ###### 0.1.7
 * sprite for hit spider
 * add additional weapons
