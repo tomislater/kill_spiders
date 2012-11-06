@@ -47,11 +47,13 @@ SPACE - Throwing black skulls (Power 5)
 
 ### TODO
 * jump up/down
-* menu
-* highscore
 * moar weapons
 
 ### History:
+###### 0.1.9
+* highscore
+* menu
+
 ###### 0.1.8
 * Refactoring
 

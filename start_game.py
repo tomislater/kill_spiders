@@ -6,8 +6,9 @@ from pygame.locals import K_SPACE
 from pygame.locals import K_LCTRL
 from pygame.locals import K_ESCAPE
 from pygame.locals import KEYUP
-from pygame.locals import K_y
-from pygame.locals import K_n
+from pygame.locals import K_RETURN
+from pygame.locals import K_UP
+from pygame.locals import K_DOWN
 
 from settings import FPS
 from settings import SILVER
@@ -34,13 +35,11 @@ from effects import Effects
 from weapons import WhiteSkull
 from weapons import BlackSkull
 
-__version__ = '0.1.8'
+__version__ = '0.1.9'
 
 
 class Main(object):
     def __init__(self):
-        self.MAIN_LOOP = True
-
         self.clock = pygame.time.Clock()
         pygame.mouse.set_visible(0)
 
@@ -54,6 +53,13 @@ class Main(object):
         self.brushing()
 
         self.level_formula = lambda x: (x + random.randint(5, x + 5))
+
+        self.MAIN_LOOP = False
+        self.MENU_LOOP = False
+        self.OPTIONS_LOOP = False
+
+        pygame.mixer.music.play(-1, 0.0)
+        self.show_menu()
         self.start()
 
     def brushing(self):
@@ -67,7 +73,7 @@ class Main(object):
 
     def event(self):
         for event in pygame.event.get():
-            if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
+            if event.type == QUIT:
                 self.MAIN_LOOP = False
             elif event.type == KEYUP:
                 if event.key == K_LCTRL:
@@ -76,9 +82,71 @@ class Main(object):
                     if self.player.black_skulls:
                         self.weapons.append(BlackSkull(self.player.rect.centerx, self.player.rect.centery, self.player.direction))
                         self.player.black_skulls -= 1
+                elif event.key == K_ESCAPE:
+                    self.brushing()
+                    self.show_menu()
 
         keys = pygame.key.get_pressed()
         self.player.update(keys)
+
+    def event_menu(self):
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                self.MAIN_LOOP = False
+                self.MENU_LOOP = False
+            elif event.type == KEYUP:
+                if event.key == K_UP:
+                    self.catch_pos_menu(-1)
+                elif event.key == K_DOWN:
+                    self.catch_pos_menu(1)
+                elif event.key == K_RETURN:
+                    if self.menu_pos == 2:  # exit game
+                        self.MAIN_LOOP = False
+                        self.MENU_LOOP = False
+                    elif self.menu_pos == 1:  # options
+                        self.options_menu()
+                    elif self.menu_pos == 0:  # start game
+                        self.MAIN_LOOP = True
+                        self.MENU_LOOP = False
+
+    def options_menu(self):
+        self.OPTIONS_LOOP = True
+        while self.OPTIONS_LOOP:
+            self.surface.blit(self.background, (0, 0))
+            text_level = self.font.render("LEVEL {0}".format(self.level + 1), True, SILVER)
+            text_levelR = text_level.get_rect(centerx=SCREEN_WIDTH / 2, centery=SCREEN_HEIGHT / 2)
+            self.surface.blit(text_level, text_levelR)
+            pygame.draw.polygon(self.surface, SILVER, [(text_levelR.centerx - 10, text_levelR.centery - 30),
+                                                       (text_levelR.centerx + 10, text_levelR.centery - 30),
+                                                       (text_levelR.centerx, text_levelR.centery - 40)])
+            pygame.draw.polygon(self.surface, SILVER, [(text_levelR.centerx - 10, text_levelR.centery + 30),
+                                                       (text_levelR.centerx + 10, text_levelR.centery + 30),
+                                                       (text_levelR.centerx, text_levelR.centery + 40)])
+            for event in pygame.event.get():
+                if event.type == QUIT:
+                    self.OPTIONS_LOOP = False
+                    self.MAIN_LOOP = False
+                    self.MENU_LOOP = False
+                elif event.type == KEYUP:
+                    if event.key == K_UP:
+                        self.level += 1
+                    elif event.key == K_DOWN:
+                        if not self.level == 0:
+                            self.level -= 1
+                    elif event.key in (K_ESCAPE, K_RETURN):
+                        self.OPTIONS_LOOP = False
+
+            pygame.display.update()
+            self.clock.tick(FPS)
+
+    def catch_pos_menu(self, pos):
+        temp_pos = self.menu_pos + pos
+        if temp_pos < 0:
+            self.menu_pos = 0
+        elif temp_pos > 2:
+            self.menu_pos = 2
+        else:
+            self.menu_pos = temp_pos
 
     def check_collision_spiders(self):
         for i in reversed(xrange(len(self.spiders))):
@@ -145,7 +213,7 @@ class Main(object):
         for x in xrange(0, lvl_formula / 3):
             self.spiders.append(PoisonSpider())
 
-        if self.level > 5:
+        if self.level > 4:
             for x in xrange(0, self.level / 5):
                 self.spiders.append(Tarantula())
 
@@ -194,57 +262,88 @@ class Main(object):
 
         pygame.display.update()
         self.clock.tick(FPS)
-        pygame.time.delay(1000)
+        pygame.time.delay(3000)
 
-        self.prompt_to_game()
+        self.brushing()
+        self.show_menu()
 
-    def prompt_to_game(self):
-        prompt_text = self.font.render("Play again? [y / n]", 1, SILVER)
-        prompt_text_r = prompt_text.get_rect(centerx=SCREEN_WIDTH / 2, centery=SCREEN_HEIGHT / 2)
-        prompt_loop = True
+    def show_menu(self):
+        text_start = self.font.render("START", True, SILVER)
+        text_options = self.font.render("OPTIONS", True, SILVER)
+        text_exit = self.font.render("EXIT", True, SILVER)
 
-        while prompt_loop:
-            for event in pygame.event.get():
-                if event.type == QUIT:
-                    self.MAIN_LOOP = False
-                    prompt_loop = False
-                elif event.type == KEYUP:
-                    if event.key in (K_ESCAPE, K_n):
-                        self.MAIN_LOOP = False
-                        prompt_loop = False
-                    elif event.key == K_y:
-                        self.brushing()
-                        prompt_loop = False
+        rect_options = text_options.get_rect(centerx=SCREEN_WIDTH / 2,
+                                             centery=SCREEN_HEIGHT / 2)
+        rect_start = text_start.get_rect(centerx=rect_options.centerx,
+                                         centery=rect_options.centery - 50)
+        rect_exit = text_exit.get_rect(centerx=rect_options.centerx,
+                                       centery=rect_options.centery + 50)
 
+        # cursors for menu
+        self.cur = self.font.render("||", True, SILVER)
+        self.l_curR = self.cur.get_rect(topleft=(rect_start.left - 20, rect_start.top))
+        self.r_curR = self.cur.get_rect(right=rect_start.right + 20, top=rect_start.top)
+        self.surface.blit(self.cur, self.l_curR)
+        self.surface.blit(self.cur, self.r_curR)
+
+        self.menu_pos = 0  # default "START"
+        self.MENU_LOOP = True
+        while self.MENU_LOOP:
             self.surface.blit(self.background, (0, 0))
-            self.player.draw(self.surface)
-            self.hud.draw(self.surface, self.player.health, self.level, self.player.black_skulls)
-            self.surface.blit(prompt_text, prompt_text_r)
+            self.surface.blit(text_start, rect_start)
+            self.surface.blit(text_options, rect_options)
+            self.surface.blit(text_exit, rect_exit)
+
+            self.draw_cursor(rect_start, rect_options, rect_exit)
+            self.event_menu()
 
             pygame.display.update()
             self.clock.tick(FPS)
 
-    def start(self):
-        pygame.mixer.music.play(-1, 0.0)
+    def draw_cursor(self, start, options, exit):
+        if self.menu_pos == 0:
+            self.l_curR.left = start.left - 20
+            self.r_curR.right = start.right + 20
+            self.l_curR.top = start.top
+            self.r_curR.top = start.top
+            self.surface.blit(self.cur, self.l_curR)
+            self.surface.blit(self.cur, self.r_curR)
+        elif self.menu_pos == 1:
+            self.l_curR.left = options.left - 20
+            self.r_curR.right = options.right + 20
+            self.l_curR.top = options.top
+            self.r_curR.top = options.top
+            self.surface.blit(self.cur, self.l_curR)
+            self.surface.blit(self.cur, self.r_curR)
+        elif self.menu_pos == 2:
+            self.l_curR.left = exit.left - 20
+            self.r_curR.right = exit.right + 20
+            self.l_curR.top = exit.top
+            self.r_curR.top = exit.top
+            self.surface.blit(self.cur, self.l_curR)
+            self.surface.blit(self.cur, self.r_curR)
 
-        text_controls_ctrl = self.font.render("CTRL - White Skulls (Power: 1)", True, SILVER)
-        text_controls_space = self.font.render("SPACE - Black Skulls (Power: 5)", True, SILVER)
-        text_info = self.font.render("ONE BLACK SKULL FOR NEXT LEVEL", True, SILVER)
-        text_controls_ctrl_r = text_controls_ctrl.get_rect(centerx=SCREEN_WIDTH / 2,
-                                                           centery=(SCREEN_HEIGHT / 2) + 30)
-        text_controls_space_r = text_controls_space.get_rect(centerx=text_controls_ctrl_r.centerx,
-                                                             centery=text_controls_ctrl_r.centery + 30)
-        text_info_r = text_info.get_rect(centerx=text_controls_space_r.centerx,
-                                         centery=text_controls_space_r.centery + 60)
-        self.surface.blit(text_controls_ctrl, text_controls_ctrl_r)
-        self.surface.blit(text_controls_space, text_controls_space_r)
-        self.surface.blit(text_info, text_info_r)
-        pygame.display.update()
-        self.clock.tick(FPS)
-        pygame.time.delay(3000)
+    def start(self):
+        if self.MAIN_LOOP:
+            text_controls_ctrl = self.font.render("CTRL - White Skulls (Power: 1)", True, SILVER)
+            text_controls_space = self.font.render("SPACE - Black Skulls (Power: 5)", True, SILVER)
+            text_info = self.font.render("ONE BLACK SKULL FOR NEXT LEVEL", True, SILVER)
+            text_controls_ctrl_r = text_controls_ctrl.get_rect(centerx=SCREEN_WIDTH / 2,
+                                                               centery=(SCREEN_HEIGHT / 2) + 30)
+            text_controls_space_r = text_controls_space.get_rect(centerx=text_controls_ctrl_r.centerx,
+                                                                 centery=text_controls_ctrl_r.centery + 30)
+            text_info_r = text_info.get_rect(centerx=text_controls_space_r.centerx,
+                                             centery=text_controls_space_r.centery + 60)
+            self.surface.blit(self.background, (0, 0))
+            self.surface.blit(text_controls_ctrl, text_controls_ctrl_r)
+            self.surface.blit(text_controls_space, text_controls_space_r)
+            self.surface.blit(text_info, text_info_r)
+            pygame.display.update()
+            self.clock.tick(FPS)
+            pygame.time.delay(5000)
 
         while self.MAIN_LOOP:
-            pygame.display.set_caption("Kill spiders with bones! FPS: {0:.0f}".format(self.clock.get_fps()))
+            pygame.display.set_caption("FPS: {0:.0f}".format(self.clock.get_fps()))
 
             self.surface.blit(self.background, (0, 0))
 
@@ -267,8 +366,10 @@ class Main(object):
             pygame.display.update()
             self.clock.tick(FPS)
 
-        pygame.mixer.music.stop()
-        pygame.quit()
+        if not self.MAIN_LOOP and not self.MENU_LOOP and not self.OPTIONS_LOOP:
+            self.hud.save_highscore()
+            pygame.mixer.music.stop()
+            pygame.quit()
 
 
 if __name__ == '__main__':
