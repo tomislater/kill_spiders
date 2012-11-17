@@ -50,6 +50,9 @@ SPACE - Throwing black skulls (Power 5)
 * moar weapons
 
 ### History:
+###### 0.1.9b
+* little refactoring
+
 ###### 0.1.9
 * highscore
 * menu

@@ -54,9 +54,7 @@ class Main(object):
 
         self.level_formula = lambda x: (x + random.randint(5, x + 5))
 
-        self.MAIN_LOOP = False
-        self.MENU_LOOP = False
-        self.OPTIONS_LOOP = False
+        self.MAIN_LOOP = self.MENU_LOOP = self.OPTIONS_LOOP = False
 
         pygame.mixer.music.play(-1, 0.0)
         self.show_menu()
@@ -69,7 +67,7 @@ class Main(object):
         self.dead_spiders = []
         self.hud = Hud()
         self.player = Player()
-        self.level = 0
+        self.level = 50
 
     def event(self):
         for event in pygame.event.get():
@@ -92,8 +90,7 @@ class Main(object):
     def event_menu(self):
         for event in pygame.event.get():
             if event.type == QUIT:
-                self.MAIN_LOOP = False
-                self.MENU_LOOP = False
+                self.MAIN_LOOP = self.MENU_LOOP = False
             elif event.type == KEYUP:
                 if event.key == K_UP:
                     self.catch_pos_menu(-1)
@@ -101,8 +98,7 @@ class Main(object):
                     self.catch_pos_menu(1)
                 elif event.key == K_RETURN:
                     if self.menu_pos == 2:  # exit game
-                        self.MAIN_LOOP = False
-                        self.MENU_LOOP = False
+                        self.MAIN_LOOP = self.MENU_LOOP = False
                     elif self.menu_pos == 1:  # options
                         self.options_menu()
                     elif self.menu_pos == 0:  # start game
@@ -116,17 +112,15 @@ class Main(object):
             text_level = self.font.render("LEVEL {0}".format(self.level + 1), True, SILVER)
             text_levelR = text_level.get_rect(centerx=SCREEN_WIDTH / 2, centery=SCREEN_HEIGHT / 2)
             self.surface.blit(text_level, text_levelR)
-            pygame.draw.polygon(self.surface, SILVER, [(text_levelR.centerx - 10, text_levelR.centery - 30),
+            pygame.draw.polygon(self.surface, SILVER, ((text_levelR.centerx - 10, text_levelR.centery - 30),
                                                        (text_levelR.centerx + 10, text_levelR.centery - 30),
-                                                       (text_levelR.centerx, text_levelR.centery - 40)])
-            pygame.draw.polygon(self.surface, SILVER, [(text_levelR.centerx - 10, text_levelR.centery + 30),
+                                                       (text_levelR.centerx, text_levelR.centery - 40)))
+            pygame.draw.polygon(self.surface, SILVER, ((text_levelR.centerx - 10, text_levelR.centery + 30),
                                                        (text_levelR.centerx + 10, text_levelR.centery + 30),
-                                                       (text_levelR.centerx, text_levelR.centery + 40)])
+                                                       (text_levelR.centerx, text_levelR.centery + 40)))
             for event in pygame.event.get():
                 if event.type == QUIT:
-                    self.OPTIONS_LOOP = False
-                    self.MAIN_LOOP = False
-                    self.MENU_LOOP = False
+                    self.OPTIONS_LOOP = self.MAIN_LOOP = self.MENU_LOOP = False
                 elif event.type == KEYUP:
                     if event.key == K_UP:
                         self.level += 1
