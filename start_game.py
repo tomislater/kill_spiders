@@ -1,3 +1,4 @@
+import time
 import random
 import pygame
 
@@ -35,7 +36,7 @@ from effects import Effects
 from weapons import WhiteSkull
 from weapons import BlackSkull
 
-__version__ = '0.1.9'
+__version__ = '0.2.0'
 
 
 class Main(object):
@@ -52,7 +53,7 @@ class Main(object):
 
         self.brushing()
 
-        self.level_formula = lambda x: (x + random.randint(5, x + 5))
+        self.level_formula = lambda x: (x + random.randint(4, x + 4))
 
         self.MAIN_LOOP = self.MENU_LOOP = self.OPTIONS_LOOP = False
 
@@ -67,7 +68,18 @@ class Main(object):
         self.dead_spiders = []
         self.hud = Hud()
         self.player = Player()
-        self.level = 50
+        self.bonus_time = 0
+        self.bonus_timmer = 30
+        self.double_bonus = False
+        self.tripple_bonus = False
+        self.level = 0
+
+    def check_bonus_time(self):
+        if self.double_bonus or self.tripple_bonus:
+            if time.time() - self.bonus_time >= self.bonus_timmer:
+                self.bonus_time = 0
+                self.double_bonus = False
+                self.tripple_bonus = False
 
     def event(self):
         for event in pygame.event.get():
@@ -75,10 +87,16 @@ class Main(object):
                 self.MAIN_LOOP = False
             elif event.type == KEYUP:
                 if event.key == K_LCTRL:
+                    if self.tripple_bonus:
+                        self.weapons.append(WhiteSkull(self.player.rect.centerx - 20, self.player.rect.centery + 20, self.player.direction))
+                        self.weapons.append(WhiteSkull(self.player.rect.centerx + 20, self.player.rect.centery + 20, self.player.direction))
+                    elif self.double_bonus:
+                        self.weapons.append(WhiteSkull(self.player.rect.centerx - 20, self.player.rect.centery + 20, self.player.direction))
                     self.weapons.append(WhiteSkull(self.player.rect.centerx, self.player.rect.centery, self.player.direction))
                 elif event.key == K_SPACE:
                     if self.player.black_skulls:
-                        self.weapons.append(BlackSkull(self.player.rect.centerx, self.player.rect.centery, self.player.direction))
+                        self.weapons.\
+                            append(BlackSkull(self.player.rect.centerx, self.player.rect.centery, self.player.direction))
                         self.player.black_skulls -= 1
                 elif event.key == K_ESCAPE:
                     self.brushing()
@@ -168,6 +186,16 @@ class Main(object):
                 self.spiders[index_spider].hit(self.weapons[i].hit)
                 if not self.spiders[index_spider].alive():
                     self.hud.update_score(self.spiders[index_spider].score)
+                    # added bonus
+                    if not self.double_bonus and not self.tripple_bonus:
+                        if random.randint(self.spiders[index_spider].score, 100) >= 90:
+                            if random.random() >= 0.8:
+                                self.double_bonus = False
+                                self.tripple_bonus = True
+                            else:
+                                self.double_bonus = True
+                                self.tripple_bonus = False
+                            self.bonus_time = time.time()
                     self.dead_spiders.append(self.spiders.pop(index_spider))
                 del self.weapons[i]
                 continue
@@ -216,7 +244,7 @@ class Main(object):
                 self.spiders.append(GiantSpider())
 
         if self.level % 15 == 0:
-            for x in xrange(0, self.level / 30):
+            for x in xrange(0, self.level / 15):
                 self.spiders.append(WailingWidow())
 
     def check_spiders(self):
@@ -231,7 +259,7 @@ class Main(object):
             self.surface.blit(text_level, text_level_r)
 
             self.player.draw(self.surface)
-            self.hud.draw(self.surface, self.player.health, self.level, self.player.black_skulls)
+            self.hud.draw(self.surface, self.player.health, self.level, self.player.black_skulls, time, self.bonus_time, self.bonus_timmer)
 
             self.make_spiders()
             self.weapons = []
@@ -252,7 +280,7 @@ class Main(object):
         self.surface.blit(self.background, (0, 0))
         self.surface.blit(game_over_text, game_over_text_r)
         self.player.draw(self.surface)
-        self.hud.draw(self.surface, self.player.health, self.level, self.player.black_skulls)
+        self.hud.draw(self.surface, self.player.health, self.level, self.player.black_skulls, time, self.bonus_time, self.bonus_timmer)
 
         pygame.display.update()
         self.clock.tick(FPS)
@@ -347,7 +375,7 @@ class Main(object):
             self.draw_spiders()
 
             self.player.draw(self.surface)
-            self.hud.draw(self.surface, self.player.health, self.level, self.player.black_skulls)
+            self.hud.draw(self.surface, self.player.health, self.level, self.player.black_skulls, time, self.bonus_time, self.bonus_timmer)
             self.event()
 
             self.check_collision_spiders()
@@ -356,6 +384,8 @@ class Main(object):
             self.check_health()
 
             self.draw_effects()
+
+            self.check_bonus_time()
 
             pygame.display.update()
             self.clock.tick(FPS)

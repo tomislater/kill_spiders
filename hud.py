@@ -39,7 +39,7 @@ class Hud(object):
         with open(self.HIGHSCORE_FILE, 'wb') as f:
             pickle.dump(self.highscore, f)
 
-    def draw(self, surface, health, level, black_skulls):
+    def draw(self, surface, health, level, black_skulls, time, bonus_time, timmer):
         level = self.font.render("LEVEL: {0}".format(level), 1, SILVER)
         level_r = level.get_rect(centerx=SCREEN_WIDTH / 2, top=10)
         surface.blit(level, level_r)
@@ -66,3 +66,10 @@ class Hud(object):
         x = self.font.render('x {0}'.format(black_skulls), 1, SILVER)
         x_r = x.get_rect(topleft=(img_black_skull_r.centerx + 15, 10))
         surface.blit(x, x_r)
+
+        if bonus_time:
+            bonus = self.font.render('BONUS TIME: {0:.0f}'.format(timmer - (time.time() - bonus_time)), True, SILVER)
+        else:
+            bonus = self.font.render('BONUS TIME: 0', True, SILVER)
+        bonus_r = bonus.get_rect(topleft=(10, 70))
+        surface.blit(bonus, bonus_r)

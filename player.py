@@ -49,18 +49,18 @@ class Player(pygame.sprite.Sprite):
         self.black_skulls = 0
 
         # for left
-        self.direction = -10
+        self.direction = -5
 
     def update(self, keys):
         if keys[K_LEFT]:
-            self.direction = -10
+            self.direction = -5
             self.frame_count += 1
             self.image = self.images_left[self.frame_count % (FPS / 2)]
             self.rect.move_ip(-10, 0)
             if self.rect.centerx < 0:
                 self.rect.centerx = 0
         elif keys[K_RIGHT]:
-            self.direction = 10
+            self.direction = 5
             self.frame_count += 1
             self.image = self.images_right[self.frame_count % (FPS / 2)]
             self.rect.move_ip(10, 0)
