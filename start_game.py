@@ -36,7 +36,7 @@ from effects import Effects
 from weapons import WhiteSkull
 from weapons import BlackSkull
 
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 
 
 class Main(object):
@@ -53,7 +53,7 @@ class Main(object):
 
         self.brushing()
 
-        self.level_formula = lambda x: (x + random.randint(4, x + 4))
+        self.level_formula = lambda x: (x + random.randint(5, x + 5))
 
         self.MAIN_LOOP = self.MENU_LOOP = self.OPTIONS_LOOP = False
 
@@ -88,11 +88,15 @@ class Main(object):
             elif event.type == KEYUP:
                 if event.key == K_LCTRL:
                     if self.tripple_bonus:
-                        self.weapons.append(WhiteSkull(self.player.rect.centerx - 20, self.player.rect.centery + 20, self.player.direction))
-                        self.weapons.append(WhiteSkull(self.player.rect.centerx + 20, self.player.rect.centery + 20, self.player.direction))
+                        self.weapons.\
+                            append(WhiteSkull(self.player.rect.centerx - 20, self.player.rect.centery + 20, self.player.direction))
+                        self.weapons.\
+                            append(WhiteSkull(self.player.rect.centerx + 20, self.player.rect.centery + 20, self.player.direction))
                     elif self.double_bonus:
-                        self.weapons.append(WhiteSkull(self.player.rect.centerx - 20, self.player.rect.centery + 20, self.player.direction))
-                    self.weapons.append(WhiteSkull(self.player.rect.centerx, self.player.rect.centery, self.player.direction))
+                        self.weapons.\
+                            append(WhiteSkull(self.player.rect.centerx - 20, self.player.rect.centery + 20, self.player.direction))
+                    self.weapons.\
+                        append(WhiteSkull(self.player.rect.centerx, self.player.rect.centery, self.player.direction))
                 elif event.key == K_SPACE:
                     if self.player.black_skulls:
                         self.weapons.\
@@ -235,21 +239,21 @@ class Main(object):
         for x in xrange(0, lvl_formula / 3):
             self.spiders.append(PoisonSpider())
 
-        if self.level > 4:
+        if self.level >= 5:
             for x in xrange(0, self.level / 5):
                 self.spiders.append(Tarantula())
 
-        if self.level % 10 == 0:
+        if self.level >= 10:
             for x in xrange(0, self.level / 10):
                 self.spiders.append(GiantSpider())
 
-        if self.level % 15 == 0:
-            for x in xrange(0, self.level / 15):
+        if self.level >= 20:
+            for x in xrange(0, self.level / 20):
                 self.spiders.append(WailingWidow())
 
     def check_spiders(self):
         if not self.spiders:
-            self.player.black_skulls += 1
+            self.player.black_skulls += 5
             self.level += 1
 
             text_level = self.font.render("LEVEL {0}".format(self.level), True, SILVER)
@@ -271,6 +275,7 @@ class Main(object):
 
     def check_health(self):
         if not self.player.alive():
+            self.hud.save_highscore()
             self.animation_game_over()
 
     def animation_game_over(self):
@@ -390,10 +395,8 @@ class Main(object):
             pygame.display.update()
             self.clock.tick(FPS)
 
-        if not self.MAIN_LOOP and not self.MENU_LOOP and not self.OPTIONS_LOOP:
-            self.hud.save_highscore()
-            pygame.mixer.music.stop()
-            pygame.quit()
+        pygame.mixer.music.stop()
+        pygame.quit()
 
 
 if __name__ == '__main__':
