@@ -50,6 +50,15 @@ SPACE - Throwing black skulls (Power 5)
 * moar weapons
 
 ### History:
+###### 0.2.1
+* some refactoring
+* added 5 black skulls for each level
+* added more special spider per level
+* fixed saving highscore to file
+
+###### 0.2.0
+* added double/tripple bonuses
+
 ###### 0.1.9b
 * little refactoring
 
